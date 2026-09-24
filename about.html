@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>소개 · 오늘의 할 일</title>
+  <script>
+    /* 화면이 그려지기 전에 테마를 먼저 적용 → 새로고침 때 흰 화면이 번쩍이지 않음 */
+    (function () {
+      try {
+        const saved = localStorage.getItem('today-theme');
+        const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (dark) document.documentElement.dataset.theme = 'dark';
+      } catch (error) { /* 저장소를 못 쓰는 환경이면 기본(밝은) 테마로 둠 */ }
+    })();
+  </script>
+  <style>
+    /* 할 일 앱(index.html)과 동일한 색 토큰 — 두 페이지가 한 사이트로 보이게 함 */
+    :root {
+      --bg: #f7f8fc;
+      --card: #ffffff;
+      --text: #19202d;
+      --muted: #8991a3;
+      --line: #e9ebf2;
+      --primary: #6757e8;
+      --primary-dark: #5546d0;
+      --soft-primary: #eeecff;
+      --shadow: 0 18px 50px rgba(46, 43, 86, .10);
+    }
+
+    * { box-sizing: border-box; }
+
+    :root[data-theme="dark"] {
+      --bg: #0f1117;
+      --card: #171a23;
+      --text: #e9ebf4;
+      --muted: #868d9f;
+      --line: #272b38;
+      --primary: #8b7cff;
+      --primary-dark: #9c8fff;
+      --soft-primary: #251f47;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .5);
+    }
+    :root[data-theme="dark"] body { background: radial-gradient(circle at 50% -15%, #241f4d 0, transparent 38%), var(--bg); }
+    :root[data-theme="dark"] .card { border-color: #262a36; }
+    :root[data-theme="dark"] .theme-toggle { box-shadow: 0 6px 18px rgba(0, 0, 0, .4); }
+
+    .theme-toggle {
+      position: fixed; top: 18px; right: 18px; z-index: 10;
+      display: grid; place-items: center;
+      width: 44px; height: 44px; padding: 0;
+      border: 1px solid var(--line); border-radius: 50%;
+      background: var(--card); color: var(--text);
+      font-size: 1.12rem; line-height: 1;
+      box-shadow: 0 6px 18px rgba(46, 43, 86, .12);
+      transition: transform .2s, background-color .25s, border-color .25s;
+    }
+    .theme-toggle:hover { transform: translateY(-2px) rotate(-10deg); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 50% -15%, #ebe8ff 0, transparent 38%), var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+    }
+    button { font: inherit; cursor: pointer; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 6px; }
+
+    .app { width: min(100% - 32px, 620px); margin: 0 auto; padding: 72px 0 48px; }
+
+    /* ── 상단: 이름 소개 ── */
+    .hero { margin-bottom: 34px; }
+    .eyebrow { color: var(--primary); font-size: .78rem; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; margin: 0 0 12px; }
+    h1 { margin: 0; font-size: clamp(2rem, 7vw, 3.15rem); letter-spacing: -.06em; line-height: 1.1; text-wrap: balance; }
+    .tagline { margin: 14px 0 0; color: var(--muted); font-size: 1rem; line-height: 1.6; max-width: 46ch; }
+
+    /* ── 중간: 관심사 카드 3개 ── */
+    .section-title { margin: 0 0 14px; font-size: .82rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+    .interests { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 0 0 40px; padding: 0; list-style: none; }
+    .card { background: var(--card); border: 1px solid rgba(224, 226, 237, .8); border-radius: 24px; box-shadow: var(--shadow); }
+    .interest { display: flex; flex-direction: column; gap: 9px; padding: 22px 20px 24px; }
+    .interest-icon { display: grid; place-items: center; width: 44px; height: 44px; margin-bottom: 4px; border-radius: 14px; background: var(--soft-primary); color: var(--primary); font-size: 1.25rem; }
+    .interest h3 { margin: 0; font-size: 1.02rem; letter-spacing: -.02em; }
+    .interest p { margin: 0; color: var(--muted); font-size: .89rem; line-height: 1.55; }
+
+    /* ── 하단: 연락처 ── */
+    .contact { padding: 24px 22px; }
+    .contact-list { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+    .contact-row { display: flex; align-items: center; gap: 14px; padding: 12px 2px; border-top: 1px solid var(--line); }
+    .contact-row:first-child { border-top: 0; }
+    .contact-label { flex: 0 0 76px; color: var(--muted); font-size: .82rem; font-weight: 700; letter-spacing: .04em; }
+    .contact-value { min-width: 0; font-size: .95rem; overflow-wrap: anywhere; text-underline-offset: 3px; }
+
+    /* ── 1주차 할 일 앱으로 가는 링크 ── */
+    .app-link { display: flex; align-items: center; gap: 15px; margin-top: 16px; padding: 18px 20px; text-decoration: none; transition: transform .2s, border-color .2s; }
+    .app-link:hover { transform: translateY(-2px); border-color: var(--primary); }
+    .app-link-icon { display: grid; place-items: center; flex: 0 0 auto; width: 42px; height: 42px; border-radius: 13px; background: var(--soft-primary); color: var(--primary); font-size: 1.2rem; }
+    .app-link-body { flex: 1; min-width: 0; }
+    .app-link-title { display: block; font-size: .98rem; font-weight: 700; letter-spacing: -.01em; }
+    .app-link-desc { display: block; margin-top: 3px; color: var(--muted); font-size: .84rem; }
+    .app-link-arrow { flex: 0 0 auto; color: var(--muted); font-size: 1.1rem; transition: transform .2s, color .2s; }
+    .app-link:hover .app-link-arrow { color: var(--primary); transform: translateX(3px); }
+
+    .footer { margin: 22px 0 0; color: var(--muted); text-align: center; font-size: .76rem; }
+
+    @media (max-width: 620px) {
+      .interests { grid-template-columns: 1fr; }
+      .interest { flex-direction: row; align-items: center; gap: 15px; padding: 18px; flex-wrap: wrap; }
+      .interest-icon { margin-bottom: 0; }
+      .interest h3 { flex: 1; min-width: 0; }
+      .interest p { flex-basis: 100%; }
+    }
+    @media (max-width: 520px) {
+      .app { padding-top: 42px; }
+      .theme-toggle { top: 12px; right: 12px; width: 38px; height: 38px; font-size: 1rem; }
+      .contact { padding: 18px 16px; }
+      .contact-row { flex-wrap: wrap; gap: 4px 14px; }
+      .contact-label { flex-basis: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" id="theme-toggle" type="button" aria-label="어두운 모드로 전환" aria-pressed="false">🌙</button>
+
+  <main class="app">
+    <!-- ══ 상단: 이름 소개 ══ -->
+    <header class="hero">
+      <p class="eyebrow">About</p>
+      <!-- ✏️ 본인 이름으로 바꾸세요 -->
+      <h1>선우</h1>
+      <!-- ✏️ 본인을 한두 줄로 소개하세요 -->
+      <p class="tagline">웹을 처음부터 만들어 보며 배우는 중입니다. 작게 만들고, 직접 써 보고, 다음 주에 조금 더 낫게 고칩니다.</p>
+    </header>
+
+    <!-- ══ 중간: 관심사 카드 3개 ══ -->
+    <h2 class="section-title">관심사</h2>
+    <ul class="interests">
+      <!-- ✏️ 아래 카드 3개의 아이콘·제목·설명을 본인 관심사로 바꾸세요 -->
+      <li class="card interest">
+        <span class="interest-icon" aria-hidden="true">🧩</span>
+        <h3>프론트엔드</h3>
+        <p>HTML·CSS·자바스크립트만으로 화면과 동작을 직접 만들어 보는 일에 관심이 있습니다.</p>
+      </li>
+      <li class="card interest">
+        <span class="interest-icon" aria-hidden="true">🎨</span>
+        <h3>인터페이스 디자인</h3>
+        <p>색과 여백을 조금 바꾸는 것만으로 쓰기 편해지는 지점을 찾아보고 있습니다.</p>
+      </li>
+      <li class="card interest">
+        <span class="interest-icon" aria-hidden="true">📚</span>
+        <h3>기록과 정리</h3>
+        <p>배운 것을 눈에 보이는 결과물로 남겨서, 나중에 다시 꺼내 볼 수 있게 만듭니다.</p>
+      </li>
+    </ul>
+
+    <!-- ══ 하단: 연락처 ══ -->
+    <h2 class="section-title">연락처</h2>
+    <section class="card contact" aria-label="연락처">
+      <ul class="contact-list">
+        <li class="contact-row">
+          <span class="contact-label">이메일</span>
+          <a class="contact-value" href="mailto:jestorysunwoo@gmail.com">jestorysunwoo@gmail.com</a>
+        </li>
+        <li class="contact-row">
+          <span class="contact-label">GitHub</span>
+          <!-- ✏️ 본인 GitHub 주소로 바꾸거나, 없으면 이 li 줄을 통째로 지우세요 -->
+          <a class="contact-value" href="https://github.com/" target="_blank" rel="noopener noreferrer">github.com</a>
+        </li>
+        <li class="contact-row">
+          <span class="contact-label">위치</span>
+          <!-- ✏️ 지역을 바꾸거나, 필요 없으면 이 li 줄을 통째로 지우세요 -->
+          <span class="contact-value">대한민국</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- ══ 1주차 할 일 앱으로 이동 ══ -->
+    <a class="card app-link" href="index.html">
+      <span class="app-link-icon" aria-hidden="true">✓</span>
+      <span class="app-link-body">
+        <strong class="app-link-title">오늘의 할 일</strong>
+        <span class="app-link-desc">1주차에 만든 할 일 관리 앱 열기</span>
+      </span>
+      <span class="app-link-arrow" aria-hidden="true">→</span>
+    </a>
+
+    <p class="footer">테마 설정은 할 일 앱과 함께 저장됩니다.</p>
+  </main>
+
+  <script>
+    const THEME_KEY = 'today-theme';
+    const themeToggle = document.querySelector('#theme-toggle');
+
+    function currentTheme() { return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'; }
+
+    function applyTheme(theme) {
+      const dark = theme === 'dark';
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      themeToggle.textContent = dark ? '☀️' : '🌙';
+      themeToggle.setAttribute('aria-pressed', String(dark));
+      themeToggle.setAttribute('aria-label', dark ? '밝은 모드로 전환' : '어두운 모드로 전환');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const next = currentTheme() === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem(THEME_KEY, next); } catch (error) { /* 저장만 실패, 화면 전환은 그대로 동작 */ }
+    });
+
+    applyTheme(currentTheme()); // head에서 이미 정해진 테마를 버튼 모양에 반영
+  </script>
+</body>
+</html>
