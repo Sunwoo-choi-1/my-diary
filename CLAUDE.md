@@ -14,17 +14,17 @@ A two-page static site written in vanilla HTML/CSS/JS. There is no build step, p
 - `about.html`: a self-introduction page (name → 3 interest cards → contact), linked to and from the todo app.
 - `index.backup-20260908.html`: a frozen copy of `index.html` from before dark mode was added. Do not edit it.
 
-This directory is the user's home folder (`C:\Users\gkgk8`), so most other files here (`.codex/`, `Downloads/`, etc.) are unrelated to this site.
+The site lives in `C:\Users\gkgk8\my-diary`, a git repository published at https://github.com/Sunwoo-choi-1/my-diary (public, default branch `main`). It used to sit loose in the user's home folder; those copies were removed on 2026-09-24 and this folder is now the only one. Commit identity is set per-repo (`Sunwoo-choi-1` / the GitHub noreply address), not globally.
 
 ## Running / checking
 
-- Open the pages directly in a browser: `file:///C:/Users/gkgk8/index.html`.
+- Open the pages directly in a browser: `file:///C:/Users/gkgk8/my-diary/index.html`.
 - Environment quirks on this machine:
   - `python3` is a broken Windows Store stub. Use `node` (v24) for any scripting or a temporary static server.
   - The Claude-in-Chrome automation browser can reach neither `file://` URLs nor servers started on localhost here.
   - Browser checks have worked by navigating to a public page and injecting the HTML with `document.open(); document.write(html); document.close()`. Inject only once per fresh navigation: re-injecting into the same window throws "Identifier ... has already been declared" because top-level `const`s persist.
 - **What actually works best here** (verified 2026-09-24): drive headless Chrome from the shell instead of the extension.
-  1. `python -m http.server 8765 --bind 127.0.0.1 --directory C:\Users\gkgk8` in the background (`python`, not `python3`, is a real 3.12 install).
+  1. `python -m http.server 8765 --bind 127.0.0.1 --directory C:\Users\gkgk8\my-diary` in the background (`python`, not `python3`, is a real 3.12 install).
   2. `"C:\Program Files\Google\Chrome\Application\chrome.exe" --headless=new --disable-gpu --no-sandbox --window-size=W,H --virtual-time-budget=6000 --screenshot=<path> --dump-dom <url>`.
   3. For behaviour, put a throwaway harness page next to `index.html` that loads it in a same-origin `<iframe>`, drives it, seeds/reads `localStorage`, and prints PASS/FAIL into a `<pre>`; read the results out of `--dump-dom`. Delete the harness afterwards.
   - Two traps: a harness that reloads the iframe must guard its `load` listener with a flag or it reload-loops forever; and **`--window-size` below roughly 500px is clamped by Windows**, so a "narrow screen" screenshot silently renders wide and gets cropped. Measure narrow layouts by putting the app in a fixed-width `<iframe>` instead.
