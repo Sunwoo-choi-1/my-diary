@@ -1,0 +1,6 @@
+# 일기 내용은 공개 저장소에 올리지 않는다
+# 앞의 /는 저장소 루트 고정용. 없으면 .claude/skills/diary/ 까지 같이 무시된다
+/diary/
+
+# 기기별 권한 설정
+.claude/settings.local.json
